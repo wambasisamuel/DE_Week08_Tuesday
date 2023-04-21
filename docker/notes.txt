@@ -1,9 +1,4 @@
 Accessing the postgresdb running in the container:  
-```
-docker exec -it week8_pg psql --username=postgres --dbname=call_log_db
-```
-
-Query the db records:  
-```
-select * from customer_call_logs;
-```
+  docker exec -it week8_pg psql --username=postgres --dbname=call_log_db
+Query the db records:
+  select * from customer_call_logs;
