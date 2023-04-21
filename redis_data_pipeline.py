@@ -3,24 +3,27 @@ import psycopg2
 import redis
 
 # Redis Cloud Instance Information
-redis_host = 
-redis_port =
-redis_password =  
+redis_host = 'redis-14010.c99.us-east-1-4.ec2.cloud.redislabs.com'
+redis_port = 14010
+redis_password =  'XBLD7yVcHgem98a3zfd6Dgz1rVRqDsqM'
 
 # Postgres Database Information
-pg_host = 'your_postgres_host'
-pg_database = 'your_postgres_database'
-pg_user = 'your_postgres_username'
-pg_password = 'your_postgres_password'
+pg_host = '104.131.120.201'
+pg_database = 'call_log_db'
+pg_user = 'postgres'
+pg_password = 'pg_W33k8'
 
 # Redis Client Object
+redis_client = redis.Redis(host=redis_host, port=redis_port, password=redis_password)
 
 
 def extract_data():
     # Extract data from CSV file using pandas
-    data = pd.read_csv('customer_call_logs.csv')
+    csv_location = 'https://raw.githubusercontent.com/wambasisamuel/DE_Week08_Tuesday/main/customer_call_logs.csv'
+    data = pd.read_csv(csv_location)
     
     # Cache data in Redis for faster retrieval
+    redis_client.set('customer_call_logs', data.to_json())
     
 
 def transform_data():
@@ -28,11 +31,23 @@ def transform_data():
     data = pd.read_json(redis_client.get('customer_call_logs'))
 
     # Transform data (clean, structure, format)
-    # ...
+    # remove nulls and duplicates
+    data = data.dropna()
+    data = data.drop_duplicates()
 
-    return transformed_data
+    # Convert duration to minutes
+    data['call_duration_min'] = data['call_duration'].str.split(':').apply(lambda x: float(x[0]) * 60 + float(x[1]) + float(x[2]) / 60).astype(float)
 
-def load_data():
+    # Format data - set column data types
+    data['call_cost_usd'] = data['call_cost'].str.replace('$', '').astype(float)
+    data['call_date'] = pd.to_datetime(data['call_date'])
+
+    # Set destination to lowercase
+    data['call_destination'] = data['call_destination'].str.lower()
+
+    return data
+
+def load_data(transformed_data):
     # Connect to Postgres database
     conn = psycopg2.connect(host=pg_host, database=pg_database, user=pg_user, password=pg_password)
 
